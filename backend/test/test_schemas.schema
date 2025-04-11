@@ -1,0 +1,47 @@
+<accountNumber>: string @index(exact) .
+<address>: uid .
+<associatedWith>: [uid] .
+<associates>: [uid] .
+<bankAccounts>: [uid] .
+<controlledBy>: [uid] .
+<controls>: [uid] .
+<description>: string .
+<facilitatedBy>: [uid] .
+<facilitates>: [uid] .
+<fullAddress>: string @index(exact) .
+<heldByEntity>: uid .
+<heldByPerson>: uid .
+<livesAt>: uid .
+<name>: string @index(term) .
+<ownedby>: [uid] .
+
+
+type <Activity> {
+  description
+}
+type <Address> {
+  fullAddress
+}
+type <BankAccount> {
+  accountNumber
+  heldByPerson
+  heldByEntity
+}
+type <Entity> {
+  name
+  ownedby
+  controlledBy
+  facilitatedBy
+  associatedWith
+  bankAccounts
+  address
+}
+type <Person> {
+  name
+  owns
+  controls
+  facilitates
+  associates
+  bankAccounts
+  livesAt
+}
