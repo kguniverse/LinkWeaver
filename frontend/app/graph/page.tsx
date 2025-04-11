@@ -1,6 +1,6 @@
 'use client'
 import dynamic from 'next/dynamic'
-const GraphViewer = dynamic(() => import('../components/GraphViewer'), { ssr: false })
+const GraphViewer = dynamic(() => import('../../components/GraphViewer'), { ssr: false })
 
 const mockElements = [
     { data: { id: 'a', label: 'Node A' } },
