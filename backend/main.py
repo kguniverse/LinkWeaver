@@ -2,6 +2,8 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Query
 import httpx
 from typing import Any, Dict, defaultdict
 import uvicorn
+import logging
+
 from api import data
 
 app = FastAPI()
@@ -73,4 +75,5 @@ async def query_by_field(field: str = Query(..., example="name")):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.DEBUG)
     uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True)
