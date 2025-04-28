@@ -29,11 +29,15 @@ export default function GraphPage() {
 
   return (
     <SidebarProvider>
-      <Sidebar variant="inset" />
+      <Sidebar variant="inset">
+        <h1 className="text-2xl font-bold">LinkWeaver Sidebar</h1>
+      </Sidebar>
       <SidebarInset>
         <Header />
-        <div className="w-full h-full">
-          <GraphViewer elements={elements} />
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            <GraphViewer elements={elements} />
+          </div>
         </div>
       </SidebarInset>
     </SidebarProvider>

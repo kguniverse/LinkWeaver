@@ -1,6 +1,8 @@
 "use client";
 import React, { useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
 import cytoscape from "cytoscape";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface GraphViewerProps {
   elements: cytoscape.ElementDefinition[];
@@ -13,21 +15,21 @@ const nodeStyleMap: Record<string, any> = {
     "background-color": "#60a5fa",
     width: "7px",
     height: "7px",
-    "font-size": "6px",
+    "font-size": "3px",
   },
   Organization: {
     shape: "roundrectangle",
     "background-color": "#4ade80",
     width: "7px",
     height: "7px",
-    "font-size": "6px",
+    "font-size": "3px",
   },
   BankAccount: {
     shape: "hexagon",
     "background-color": "#c084fc",
     width: "6px",
     height: "6px",
-    "font-size": "6px",
+    "font-size": "3px",
   },
 };
 
@@ -62,7 +64,8 @@ function generateStyles() {
     {
       selector: "edge",
       style: {
-        label: "data(label)",
+        label: "",
+        'text-opacity': 0,
         "curve-style": "bezier",
         "target-arrow-shape": "triangle",
         "line-color": "#aaa",
@@ -70,6 +73,36 @@ function generateStyles() {
         "arrow-scale": 0.25,
         width: 0.25,
         "font-size": "3px",
+      },
+    },
+    {
+      selector: 'node:active',
+      style: {
+        'overlay-opacity': 0,
+      },
+    },
+    {
+      selector: 'node:grabbed',
+      style: {
+        'overlay-opacity': 0,
+      },
+    },
+    {
+      selector: 'node:selected',
+      style: {
+        'overlay-opacity': 0,
+      },
+    },
+    {
+      selector: 'edge:active',
+      style: {
+        'overlay-opacity': 0,
+      },
+    },
+    {
+      selector: 'edge:selected',
+      style: {
+        'overlay-opacity': 0,
       },
     },
   ];
@@ -86,6 +119,7 @@ function generateStyles() {
 
 export default function GraphViewer({ elements }: GraphViewerProps) {
   const cyRef = useRef<HTMLDivElement>(null);
+  const cyInstance = useRef<cytoscape.Core | null>(null);
 
   useEffect(() => {
     if (!cyRef.current) {
@@ -98,20 +132,51 @@ export default function GraphViewer({ elements }: GraphViewerProps) {
       style: generateStyles(),
       layout: {
         name: "cose",
+        animate: true,
         gravity: 0.25,
-        nodeRepulsion: () => 2048,
+        nodeRepulsion: () => 8500,
       },
     });
 
+    cy.on('mouseover', 'edge', function (evt) {
+      const edge = evt.target;
+      edge.style({
+        'label': edge.data('label'),
+        'text-opacity': 1
+      });
+    });
+
+    cy.on('mouseout', 'edge', function (evt) {
+      const edge = evt.target;
+      edge.style({
+        'label': '',
+        'text-opacity': 0
+      });
+    });
+
     cy.ready(() => {
-      // cy.layout({ name: "cose-bilkent" }).run();
       cy.fit();
     });
 
+    cyInstance.current = cy;
+
     return () => cy.destroy();
   }, [elements]);
-  console.log("elements", elements);
-  console.log("cyRef.current", cyRef.current);
 
-  return <div className="w-full h-full" ref={cyRef} />;
+  const handleFit = () => {
+    if (cyInstance.current) {
+      cyInstance.current.fit();
+    }
+  };
+
+  return (
+    <Card className="w-full h-full">
+      <CardContent className="w-full h-full">
+        <div className="w-full h-full" ref={cyRef} />
+        <Button onClick={handleFit} className="absolute bottom-4 right-4 z-10">
+          Recenter
+        </Button>
+      </CardContent>
+    </Card>
+  );
 }
