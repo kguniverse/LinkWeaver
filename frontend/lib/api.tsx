@@ -1,8 +1,11 @@
 // This file contains the mock implementation of the fetchGraphData function.
+
+import { mock } from "node:test";
+
 // FIXME: This is a mock implementation. You should replace it with the actual API call to fetch graph data.
-export async function fetchGraphData(name: string): Promise<any> {
-  return {
-    entities: [
+export async function fetchGraphData(name?: string): Promise<any> {
+  const mockData = {
+    nodes: [
       { id: "8753", label: "Neuralink", type: "Organization", attrs: "{}" },
       { id: "4363", label: "SpaceX", type: "Organization", attrs: "{}" },
       { id: "3532", label: "Pretoria", type: "Organization", attrs: "{}" },
@@ -52,13 +55,15 @@ export async function fetchGraphData(name: string): Promise<any> {
       { source: "4559", target: "9452", label: "work location", attrs: "{}" },
     ],
   };
+
+  return mockData;
 }
 export function convertToCytoscape(data: any): cytoscape.ElementDefinition[] {
   const elements: cytoscape.ElementDefinition[] = [];
-  const { entities, relations } = data;
+  const { nodes, relations } = data;
 
   const entityMap: { [key: string]: cytoscape.ElementDefinition } = {};
-  entities.forEach((entity: any) => {
+  nodes.forEach((entity: any) => {
     const { id, label, type, attrs } = entity;
     const element: cytoscape.ElementDefinition = {
       data: {

@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 interface GraphViewerProps {
   elements: cytoscape.ElementDefinition[];
+  onNodeSelect: (selected: string[]) => void;
 }
 
 // Define the node styles based on the type
@@ -117,7 +118,7 @@ function generateStyles() {
   return styles;
 }
 
-export default function GraphViewer({ elements }: GraphViewerProps) {
+export default function GraphViewer({ elements, onNodeSelect }: GraphViewerProps) {
   const cyRef = useRef<HTMLDivElement>(null);
   const cyInstance = useRef<cytoscape.Core | null>(null);
 
@@ -154,6 +155,13 @@ export default function GraphViewer({ elements }: GraphViewerProps) {
       });
     });
 
+    cy.on('click', 'node', function (evt) {
+      const node = evt.target;
+      const selectedNodes = cy.$(':selected');
+      const selectedIds = selectedNodes.map((n) => n.id());
+      onNodeSelect(selectedIds);
+    });
+
     cy.ready(() => {
       cy.fit();
     });
@@ -170,13 +178,11 @@ export default function GraphViewer({ elements }: GraphViewerProps) {
   };
 
   return (
-    <Card className="w-full h-full">
-      <CardContent className="w-full h-full">
-        <div className="w-full h-full" ref={cyRef} />
-        <Button onClick={handleFit} className="absolute bottom-4 right-4 z-10">
-          Recenter
-        </Button>
-      </CardContent>
-    </Card>
+    <div className="relative w-full h-full">
+      <div className="w-full h-full" ref={cyRef} />
+      <Button onClick={handleFit} className="absolute bottom-4 right-4 z-10">
+        Recenter
+      </Button>
+    </div>
   );
 }
