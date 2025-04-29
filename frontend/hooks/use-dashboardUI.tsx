@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 
 interface DashboardUIState {
-    selectedNodeId: string | null;
-    setSelectedNodeId: (id: string | null) => void;
+    searchSelectedNodeId: string | null;
+    setSearchSelectedNodeId: (id: string) => void;
 }
 
 export const useDashboardUI = create<DashboardUIState>((set) => ({
-    selectedNodeId: null,
-    setSelectedNodeId: (id) => set({ selectedNodeId: id }),
+    searchSelectedNodeId: null,
+    setSearchSelectedNodeId: (id: string) => set({ searchSelectedNodeId: id }),
 }));

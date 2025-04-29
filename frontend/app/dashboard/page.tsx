@@ -14,18 +14,9 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Header from "@/components/header";
 import SearchPanel from "@/components/SearchPanel";
-import {
-  Command,
-  CommandInput,
-  CommandList,
-  CommandEmpty,
-} from "@/components/ui/command";
-
-import { QueryClientProvider } from "@tanstack/react-query";
 
 export default function GraphPage() {
   const [elements, setElements] = useState<ElementDefinition[]>([]);
-
   const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
 
   useEffect(() => {
@@ -48,9 +39,9 @@ export default function GraphPage() {
           <div className="w-0 flex-grow-[1] flex flex-col p-4">
             <Card className="flex flex-col flex-1">
               <CardHeader>
-                <h2 className="text-lg font-semibold">
-                  (Hold: Search and Filter)
-                </h2>
+                <h3>
+                  Search Node
+                </h3>
               </CardHeader>
               <CardContent>
                 <SearchPanel />
