@@ -3,36 +3,21 @@ import {
   CommandInput,
   CommandList,
   CommandEmpty,
-  CommandSeparator,
 } from "@/components/ui/command";
+
 import { useEffect, useState } from "react";
-import { CommandItem } from "cmdk";
-import { fetchGraphData } from "@/lib/api";
+import { useDashboardUI } from "@/hooks/use-dashboardUI";
+import { useAllNodes } from "@/hooks/use-allNodes";
 
 export default function SearchPanel() {
   const [searchQuery, setSearchQuery] = useState("");
+  const setSelectedNodeId = useDashboardUI((s) => s.setSelectedNodeId);
+  const { data: allNodes = [] } = useAllNodes();
 
-  const [elements, setElements] = useState<any>({});
 
-  useEffect(() => {
-    async function loadGraph() {
-      const data = await fetchGraphData();
-      console.log("data", data);
-      setElements(data);
-    }
-    loadGraph();
-  }, []);
-
-  const { nodes, edges } = elements;
-  console.log("edges", edges);
-  console.log("elements", elements);
-  console.log("nodes", nodes);
-
-  const filteredData = nodes.filter(
-    (item: any) =>
-      item.data.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.data.attrs.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // const filtered = allNodes.filter((n) =>
+  //   n.label.toLowerCase().includes(searchQuery.toLowerCase())
+  // );
 
   return (
     <Command>
@@ -42,11 +27,19 @@ export default function SearchPanel() {
         onValueChange={setSearchQuery}
       />
       <CommandList>
-        {filteredData.length === 0 ? (
-          <CommandEmpty>No result found.</CommandEmpty>
-        ) : (
-          filteredData.map((item) => <CommandItem>item.label</CommandItem>)
-        )}
+        <CommandEmpty>No result found.</CommandEmpty>
+        {/* {filtered.map((node) => (
+          <CommandItem
+            key={node.id}
+            value={node.label}
+            onSelect={() => {
+              setSelectedNodeId(node.id);
+              // setSearchQuery(""); // Optional: clear the search input after selection
+            }}
+          >
+            {node.label}
+          </CommandItem>
+        ))} */}
       </CommandList>
     </Command>
   );

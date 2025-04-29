@@ -14,6 +14,14 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Header from "@/components/header";
 import SearchPanel from "@/components/SearchPanel";
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+} from "@/components/ui/command";
+
+import { QueryClientProvider } from "@tanstack/react-query";
 
 export default function GraphPage() {
   const [elements, setElements] = useState<ElementDefinition[]>([]);
@@ -23,7 +31,6 @@ export default function GraphPage() {
   useEffect(() => {
     async function loadGraph() {
       const data = await fetchGraphData();
-      console.log("data", data);
       const cytoElements = convertToCytoscape(data);
       setElements(cytoElements);
     }
@@ -45,7 +52,9 @@ export default function GraphPage() {
                   (Hold: Search and Filter)
                 </h2>
               </CardHeader>
-              <CardContent>{/* <SearchPanel /> */}</CardContent>
+              <CardContent>
+                <SearchPanel />
+              </CardContent>
             </Card>
 
             <Card className="flex flex-col flex-1">
@@ -71,5 +80,6 @@ export default function GraphPage() {
         </div>
       </SidebarInset>
     </SidebarProvider>
+
   );
 }
