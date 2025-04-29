@@ -38,10 +38,6 @@ export default function SearchPanel() {
             onSelect={() => {
               setSearchSelectedNodeId(node.id);
               setSearchQuery(node.label);
-              const searchSelectedNodeId = useDashboardUI(
-                (s) => s.searchSelectedNodeId
-              );
-              console.log("searchSelectedNodeId", searchSelectedNodeId);
             }}
           >
             {node.label}
