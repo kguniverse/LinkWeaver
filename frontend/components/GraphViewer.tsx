@@ -2,12 +2,7 @@
 import React, { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import cytoscape from "cytoscape";
-import { Card, CardContent } from "@/components/ui/card";
-
-interface GraphViewerProps {
-  elements: cytoscape.ElementDefinition[];
-  onNodeSelect: (selected: string[]) => void;
-}
+import { graphStore } from "@/lib/graph-store";
 
 // Define the node styles based on the type
 const nodeStyleMap: Record<string, any> = {
@@ -118,7 +113,7 @@ function generateStyles() {
   return styles;
 }
 
-export default function GraphViewer({ elements, onNodeSelect }: GraphViewerProps) {
+export default function GraphViewer() {
   const cyRef = useRef<HTMLDivElement>(null);
   const cyInstance = useRef<cytoscape.Core | null>(null);
 
@@ -129,7 +124,7 @@ export default function GraphViewer({ elements, onNodeSelect }: GraphViewerProps
     }
     const cy = cytoscape({
       container: cyRef.current,
-      elements,
+      elements: [],
       style: generateStyles(),
       layout: {
         name: "cose",
@@ -138,6 +133,8 @@ export default function GraphViewer({ elements, onNodeSelect }: GraphViewerProps
         nodeRepulsion: () => 8500,
       },
     });
+
+    graphStore.setCyInstance(cy);
 
     cy.on('mouseover', 'edge', function (evt) {
       const edge = evt.target;
@@ -159,7 +156,7 @@ export default function GraphViewer({ elements, onNodeSelect }: GraphViewerProps
       const node = evt.target;
       const selectedNodes = cy.$(':selected');
       const selectedIds = selectedNodes.map((n) => n.id());
-      onNodeSelect(selectedIds);
+      // onNodeSelect(selectedIds);
     });
 
     cy.ready(() => {
@@ -168,8 +165,11 @@ export default function GraphViewer({ elements, onNodeSelect }: GraphViewerProps
 
     cyInstance.current = cy;
 
-    return () => cy.destroy();
-  }, [elements]);
+    return () => {
+      cy.destroy();
+      graphStore.setCyInstance(null);
+    }
+  }, []);
 
   const handleFit = () => {
     if (cyInstance.current) {

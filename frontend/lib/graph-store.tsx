@@ -1,3 +1,6 @@
+import { ElementDefinition } from "cytoscape";
+import cytoscape from "cytoscape";
+
 type NodeType = {
     id: string;
     label: string;
@@ -6,17 +9,19 @@ type NodeType = {
 }
 
 type EdgeType = {
-    id: string;
+    id?: string;
     source: string;
     target: string;
+    label?: string;
     type?: string;
     attrs?: Object;
 }
 
 class GraphStore {
-    nodeMap: Map<string, NodeType>;
-    edgeMap: Map<string, EdgeType>;
-    adjacencyMap: Map<string, EdgeType[]>;
+    private nodeMap: Map<string, NodeType>;
+    private edgeMap: Map<string, EdgeType>;
+    private adjacencyMap: Map<string, EdgeType[]>;
+    private cy: cytoscape.Core | null = null;
 
     constructor() {
         this.nodeMap = new Map();
@@ -24,13 +29,29 @@ class GraphStore {
         this.adjacencyMap = new Map();
     }
 
+    setCyInstance(cy: cytoscape.Core | null) {
+        this.cy = cy;
+    }
+
     addNode(node: NodeType) {
         if (!this.nodeMap.has(node.id)) {
             this.nodeMap.set(node.id, node);
+
+            if (this.cy && this.cy.getElementById(node.id).length === 0) {
+                this.cy.add({
+                    group: "nodes",
+                    data: {
+                        ...node,
+                    },
+                });
+            }
         }
     }
 
     addEdge(edge: EdgeType) {
+        if (!edge.id) {
+            edge.id = `${edge.source}-${edge.target}`;
+        }
         if (this.edgeMap.has(edge.id)) return;
 
         this.edgeMap.set(edge.id, edge);
@@ -44,17 +65,29 @@ class GraphStore {
             this.adjacencyMap.set(edge.target, []);
         }
         this.adjacencyMap.get(edge.target)!.push(edge);
+
+        console.log("edge", edge);
+        if (this.cy && this.cy.getElementById(edge.id).length === 0) {
+            this.cy.add({
+                group: "edges",
+                data: {
+                    ...edge,
+                },
+            });
+        }
     }
 
     removeNode(nodeId: string) {
         const relatedEdges = this.adjacencyMap.get(nodeId) || [];
 
         for (const edge of relatedEdges) {
-            this.removeEdge(edge.id);
+            this.removeEdge(edge.id!);
         }
 
         this.nodeMap.delete(nodeId);
         this.adjacencyMap.delete(nodeId);
+
+        this.cy?.getElementById(nodeId).remove();
     }
 
     removeEdge(edgeId: string) {
@@ -71,6 +104,19 @@ class GraphStore {
         );
 
         this.edgeMap.delete(edgeId);
+        this.cy?.getElementById(edgeId).remove();
+    }
+
+    layoutGraph(options?: cytoscape.LayoutOptions) {
+        if (!this.cy) return;
+        //TODO: Add layout options
+        this.cy.layout({
+            name: "cose",
+            // animate: true,
+            // gravity: 0.25,
+            // nodeRepulsion: () => 8500,
+            ...options,
+        }).run();
     }
 
     getNeighbors(nodeId: string): NodeType[] {
@@ -102,10 +148,14 @@ class GraphStore {
         return { nodes, edges };
     }
 
+
+
     clear() {
         this.nodeMap.clear();
         this.edgeMap.clear();
         this.adjacencyMap.clear();
+        this.cy?.elements().remove();
+        this.cy?.reset();
     }
 }
 

@@ -61,10 +61,7 @@ export default function GraphPage() {
           <div className="w-0 flex-grow-[3] flex flex-col p-4">
             <Card className="w-full h-full">
               <CardContent className="w-full h-full">
-                <GraphViewer
-                  elements={elements}
-                  onNodeSelect={(selected) => setSelectedNodes(selected)}
-                />
+                <GraphViewer />
               </CardContent>
             </Card>
           </div>
