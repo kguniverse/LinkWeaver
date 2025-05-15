@@ -33,7 +33,12 @@ const mockData = {
         },
         { id: "8606", label: "Kimbal Musk", type: "Person", attrs: "{}" },
         { id: "7415", label: "Tesla, Inc.", type: "Organization", attrs: "{}" },
-        { id: "4559", label: "Elon Musk", type: "Person", attrs: "{}" },
+        {
+            id: "4559", label: "Elon Musk", type: "Person", attrs: {
+                tel: "123456789",
+                email: "123@123"
+            }
+        },
     ],
     relations: [
         { source: "4559", target: "8753", label: "", attrs: "{}" },

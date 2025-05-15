@@ -119,6 +119,10 @@ class GraphStore {
         }).run();
     }
 
+    getNodeById(nodeId: string): NodeType | undefined {
+        return this.nodeMap.get(nodeId);
+    }
+
     getNeighbors(nodeId: string): NodeType[] {
         const edges = this.adjacencyMap.get(nodeId) || [];
         const neighborIds = new Set<string>();

@@ -15,6 +15,7 @@ import { loadAndExpand } from "@/services/node-service";
 export default function SearchPanel() {
   const [searchQuery, setSearchQuery] = useState("");
   const setSearchSelectedNodeId = useDashboardUI((s) => s.setSearchSelectedNodeId);
+  const setDisplayNodeId = useDashboardUI((s) => s.setDisplayNodeId);
   const { data: allNodes = [], isLoading } = useAllNodes();
 
   const filtered = allNodes.filter((n) =>
@@ -40,7 +41,7 @@ export default function SearchPanel() {
               graphStore.clear();
               setSearchSelectedNodeId(node.id);
               setSearchQuery(node.label);
-
+              setDisplayNodeId(node.id);
               await loadAndExpand(node.id);
             }}
           >
