@@ -123,17 +123,23 @@ class GraphStore {
         return this.nodeMap.get(nodeId);
     }
 
-    getNeighbors(nodeId: string): NodeType[] {
+    getNeighbors(nodeId: string): Array<Record<string, string>> {
         const edges = this.adjacencyMap.get(nodeId) || [];
-        const neighborIds = new Set<string>();
+        const neighbors = new Array<Record<string, string>>();
 
         for (const edge of edges) {
-            neighborIds.add(edge.source === nodeId ? edge.target : edge.source);
+            const fromName = this.getNodeById(edge.source)?.label || "";
+            const toName = this.getNodeById(edge.target)?.label || "";
+            neighbors.push({
+                id: edge.id ?? "",
+                label: edge.label ? edge.label : "",
+                type: edge.type ? edge.type : "",
+                fromName,
+                toName,
+            });
         }
 
-        return Array.from(neighborIds)
-            .map((id) => this.nodeMap.get(id))
-            .filter((n): n is NodeType => !!n);
+        return neighbors;
     }
 
     getFirstDegreeSubgraph(nodeId: string) {
