@@ -119,6 +119,17 @@ class GraphStore {
         }).run();
     }
 
+    centerGraphOnNode(nodeId: string) {
+        if (!this.cy) return;
+
+        const node = this.cy.getElementById(nodeId);
+        if (node && node.length > 0) {
+            this.cy.center(node);
+            // this.cy.zoom({ level: 1.5, renderedPosition: node.renderedPosition() });
+            node.select();
+        }
+    }
+
     getNodeById(nodeId: string): NodeType | undefined {
         return this.nodeMap.get(nodeId);
     }
@@ -136,6 +147,8 @@ class GraphStore {
                 type: edge.type ? edge.type : "",
                 fromName,
                 toName,
+                source: edge.source,
+                target: edge.target,
             });
         }
 

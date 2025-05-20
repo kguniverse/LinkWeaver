@@ -7,10 +7,10 @@ import {
     TableBody,
     TableCell,
     TableFooter
-} from "./ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area"
+} from "@/components/ui/table";
 import { useDashboardUI } from "@/hooks/use-dashboardUI";
 import { graphStore } from "@/lib/graph-store";
+
 
 export default function DisplayPanel() {
     const displayNodeId = useDashboardUI((s) => s.displayNodeId);
@@ -32,7 +32,7 @@ export default function DisplayPanel() {
                 {edges &&
                     Array.from(edges).map((edge) => {
                         return (
-                            <TableRow key={edge.id}>
+                            <TableRow key={edge.id} onClick={() => { graphStore.centerGraphOnNode(edge.target) }}>
                                 <TableCell className="text-left">{edge.fromName}</TableCell>
                                 <TableCell className="text-left">{edge.toName}</TableCell>
                                 <TableCell className="text-left">{edge.label}</TableCell>
