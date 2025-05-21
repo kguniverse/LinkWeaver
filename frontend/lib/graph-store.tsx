@@ -1,5 +1,6 @@
 import { ElementDefinition } from "cytoscape";
 import cytoscape from "cytoscape";
+import { FirstSubgraph } from "@/services/node-service";
 
 type NodeType = {
     id: string;
@@ -128,6 +129,19 @@ class GraphStore {
             this.cy.center(node);
             node.select();
         }
+    }
+
+    expandNode(nodeId: string) {
+        // TODO: Implement the logic to expand the node
+        
+        const { nodes, edges } = FirstSubgraph(nodeId);
+        for (const node of nodes) {
+            this.addNode(node);
+        }
+        for (const edge of edges) {
+            this.addEdge(edge);
+        }
+        this.layoutGraph();
     }
 
     getNodeById(nodeId: string): NodeType | undefined {

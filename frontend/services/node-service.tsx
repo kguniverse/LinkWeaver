@@ -109,3 +109,32 @@ export const loadAndExpand = async (nodeId: string) => {
     // Step 4: Re-layout the graph after update
     graphStore.layoutGraph();
 };
+
+export const FirstSubgraph = (nodeId: string) => {
+    // 查找中心节点
+    const centerNode = mockData.nodes.find((n) => n.id === nodeId);
+    if (!centerNode) return { nodes: [], edges: [] };
+
+    // 找出所有与该节点直接相连的边
+    const connectedEdges = mockData.relations.filter(
+        (e) => e.source === nodeId || e.target === nodeId
+    );
+
+    // 收集所有相邻节点的ID
+    const neighborIds = new Set<string>();
+    connectedEdges.forEach((edge) => {
+        const neighborId = edge.source === nodeId ? edge.target : edge.source;
+        neighborIds.add(neighborId);
+    });
+
+    // 获取所有相邻节点
+    const neighborNodes = mockData.nodes.filter((node) =>
+        neighborIds.has(node.id)
+    );
+
+    // 返回包含中心节点、相邻节点和连接边的子图
+    return {
+        nodes: [centerNode, ...neighborNodes],
+        edges: connectedEdges
+    };
+}

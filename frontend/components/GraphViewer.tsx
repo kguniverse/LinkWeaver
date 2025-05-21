@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import cytoscape from "cytoscape";
 import { graphStore } from "@/lib/graph-store";
+import { useDashboardUI } from "@/hooks/use-dashboardUI";
 
 // Define the node styles based on the type
 const nodeStyleMap: Record<string, any> = {
@@ -120,6 +121,7 @@ function generateStyles() {
 export default function GraphViewer() {
   const cyRef = useRef<HTMLDivElement>(null);
   const cyInstance = useRef<cytoscape.Core | null>(null);
+  const setDisplayNodeId = useDashboardUI((s) => s.setDisplayNodeId);
 
   useEffect(() => {
     if (!cyRef.current) {
@@ -158,9 +160,7 @@ export default function GraphViewer() {
 
     cy.on('click', 'node', function (evt) {
       const node = evt.target;
-      const selectedNodes = cy.$(':selected');
-      const selectedIds = selectedNodes.map((n) => n.id());
-      // onNodeSelect(selectedIds);
+      setDisplayNodeId(node.id());
     });
 
     cy.ready(() => {
