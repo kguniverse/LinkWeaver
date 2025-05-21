@@ -64,24 +64,48 @@ export function fetchAllNodes() {
 }
 
 export const loadAndExpand = async (nodeId: string) => {
-    //TODO: Change from mock data to real data
+    // TODO: Change from mock data to real data
     // const res = await fetch(`/api/graph?id=${nodeId}`);
     // const { node, edges } = await res.json();
+
     const node = mockData.nodes.find((n) => n.id === nodeId);
-    const edges = mockData.relations.filter(
+    if (!node) return;
+
+    // Add the central node to the graph
+    graphStore.addNode(node);
+
+    // Step 1: Get all directly connected edges
+    const directEdges = mockData.relations.filter(
         (e) => e.source === nodeId || e.target === nodeId
     );
 
-    if (!node) return;
-
-    graphStore.addNode(node);
-    for (const edge of edges) {
+    // Step 2: Track neighbor IDs
+    const neighborIds = new Set<string>();
+    for (const edge of directEdges) {
         const neighborId = edge.source === nodeId ? edge.target : edge.source;
-        // const neighbor = await fetch(`/api/node/${neighborId}`).then(res => res.json());
+        neighborIds.add(neighborId);
+
         const neighbor = mockData.nodes.find((n) => n.id === neighborId);
         if (!neighbor) continue;
+
         graphStore.addNode(neighbor);
         graphStore.addEdge(edge);
     }
+
+    // Step 3: Add internal edges between neighbors (including nodeId)
+    const closureIds = new Set<string>(neighborIds);
+    closureIds.add(nodeId); // include the central node
+
+    for (const edge of mockData.relations) {
+        const { source, target } = edge;
+        if (
+            closureIds.has(source) &&
+            closureIds.has(target)
+        ) {
+            graphStore.addEdge(edge);
+        }
+    }
+
+    // Step 4: Re-layout the graph after update
     graphStore.layoutGraph();
 };

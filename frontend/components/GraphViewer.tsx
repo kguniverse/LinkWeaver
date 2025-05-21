@@ -86,8 +86,12 @@ function generateStyles() {
     {
       selector: 'node:selected',
       style: {
+        'border-width': 0.8,
+        'border-color': '#999999',
         'overlay-opacity': 0,
-      },
+        'background-opacity': 1,
+        'z-index': 9999
+      }
     },
     {
       selector: 'edge:active',

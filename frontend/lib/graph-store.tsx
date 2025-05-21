@@ -124,8 +124,8 @@ class GraphStore {
 
         const node = this.cy.getElementById(nodeId);
         if (node && node.length > 0) {
+            this.cy.elements().unselect();
             this.cy.center(node);
-            // this.cy.zoom({ level: 1.5, renderedPosition: node.renderedPosition() });
             node.select();
         }
     }
