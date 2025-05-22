@@ -1,15 +1,16 @@
 import { ElementDefinition } from "cytoscape";
 import cytoscape from "cytoscape";
 import { FirstSubgraph } from "@/services/node-service";
+import { init } from "next/dist/compiled/webpack/webpack";
 
-type NodeType = {
+export type NodeType = {
     id: string;
     label: string;
     type?: string;
     attrs?: Object;
 }
 
-type EdgeType = {
+export type EdgeType = {
     id?: string;
     source: string;
     target: string;
@@ -120,6 +121,22 @@ class GraphStore {
         }).run();
     }
 
+    initGraph(nodeID: string) {
+        if (!this.cy) return;
+
+        const { nodes, edges } = FirstSubgraph(nodeID);
+        for (const node of nodes) {
+            this.addNode(node);
+        }
+        for (const edge of edges) {
+            this.addEdge(edge);
+        }
+
+        this.layoutGraph();
+        this.cy.center(this.cy.getElementById(nodeID));
+        this.cy.elements().unselect();
+    }
+
     centerGraphOnNode(nodeId: string) {
         if (!this.cy) return;
 
@@ -132,8 +149,8 @@ class GraphStore {
     }
 
     expandNode(nodeId: string) {
-        // TODO: Implement the logic to expand the node
-        
+        // lock existing nodes
+        // this.cy?.elements().lock();
         const { nodes, edges } = FirstSubgraph(nodeId);
         for (const node of nodes) {
             this.addNode(node);
@@ -142,6 +159,7 @@ class GraphStore {
             this.addEdge(edge);
         }
         this.layoutGraph();
+        // this.cy?.elements().unlock();
     }
 
     getNodeById(nodeId: string): NodeType | undefined {

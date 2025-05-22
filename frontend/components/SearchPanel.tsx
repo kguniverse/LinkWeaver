@@ -10,7 +10,6 @@ import { useEffect, useState, useRef } from "react";
 import { useDashboardUI } from "@/hooks/use-dashboardUI";
 import { useAllNodes } from "@/hooks/use-allNodes";
 import { graphStore } from "@/lib/graph-store";
-import { loadAndExpand } from "@/services/node-service";
 import { X } from "lucide-react";
 
 export default function SearchPanel() {
@@ -57,13 +56,13 @@ export default function SearchPanel() {
               setSearchSelectedNodeId(node.id);
               setSearchQuery(node.label);
               setDisplayNodeId(node.id);
-              await loadAndExpand(node.id);
+              graphStore.initGraph(node.id);
             }}
           >
             {node.label}
           </CommandItem>
         ))}
       </CommandList>
-    </Command>
+    </Command >
   );
 }

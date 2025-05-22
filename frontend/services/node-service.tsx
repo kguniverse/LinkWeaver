@@ -1,4 +1,4 @@
-import { graphStore } from "@/lib/graph-store";
+import { NodeType, EdgeType } from "@/lib/graph-store";
 
 // TODO: Change from mock data to real data
 const mockData = {
@@ -60,81 +60,57 @@ const mockData = {
 
 export function fetchAllNodes() {
     //TODO: Change from mock data to real data
+    // Only used in search panel
     return mockData.nodes;
 }
 
-export const loadAndExpand = async (nodeId: string) => {
-    // TODO: Change from mock data to real data
-    // const res = await fetch(`/api/graph?id=${nodeId}`);
-    // const { node, edges } = await res.json();
-
-    const node = mockData.nodes.find((n) => n.id === nodeId);
-    if (!node) return;
-
-    // Add the central node to the graph
-    graphStore.addNode(node);
-
-    // Step 1: Get all directly connected edges
-    const directEdges = mockData.relations.filter(
-        (e) => e.source === nodeId || e.target === nodeId
-    );
-
-    // Step 2: Track neighbor IDs
-    const neighborIds = new Set<string>();
-    for (const edge of directEdges) {
-        const neighborId = edge.source === nodeId ? edge.target : edge.source;
-        neighborIds.add(neighborId);
-
-        const neighbor = mockData.nodes.find((n) => n.id === neighborId);
-        if (!neighbor) continue;
-
-        graphStore.addNode(neighbor);
-        graphStore.addEdge(edge);
-    }
-
-    // Step 3: Add internal edges between neighbors (including nodeId)
-    const closureIds = new Set<string>(neighborIds);
-    closureIds.add(nodeId); // include the central node
-
-    for (const edge of mockData.relations) {
-        const { source, target } = edge;
-        if (
-            closureIds.has(source) &&
-            closureIds.has(target)
-        ) {
-            graphStore.addEdge(edge);
-        }
-    }
-
-    // Step 4: Re-layout the graph after update
-    graphStore.layoutGraph();
-};
-
 export const FirstSubgraph = (nodeId: string) => {
-    // 查找中心节点
+
     const centerNode = mockData.nodes.find((n) => n.id === nodeId);
     if (!centerNode) return { nodes: [], edges: [] };
 
-    // 找出所有与该节点直接相连的边
     const connectedEdges = mockData.relations.filter(
         (e) => e.source === nodeId || e.target === nodeId
     );
 
-    // 收集所有相邻节点的ID
     const neighborIds = new Set<string>();
     connectedEdges.forEach((edge) => {
         const neighborId = edge.source === nodeId ? edge.target : edge.source;
         neighborIds.add(neighborId);
     });
 
-    // 获取所有相邻节点
     const neighborNodes = mockData.nodes.filter((node) =>
         neighborIds.has(node.id)
     );
 
-    // 返回包含中心节点、相邻节点和连接边的子图
     return {
         nodes: [centerNode, ...neighborNodes],
         edges: connectedEdges
+    };
+}
+
+export function fetchNodeInfo(nodeId: string) {
+    // Find the node with the given ID
+    const node = mockData.nodes.find((n) => n.id === nodeId);
+    if (!node) return null;
+
+    // Find all connections where this node is either the source or target
+    const connections = mockData.relations.filter(
+        (relation) => relation.source === nodeId || relation.target === nodeId
+    );
+
+    // Convert the node to the format expected by DisplayPanelProps
+    const nodeInfo = {
+        ...node,
+        // Parse attrs if it's a string, or keep it as is if it's already an object
+        attrs: typeof node.attrs === 'string' && node.attrs !== '{}'
+            ? JSON.parse(node.attrs)
+            : node.attrs
+    };
+
+    // Return the data in DisplayPanelProps format
+    return {
+        nodeInfo: nodeInfo,
+        Connections: connections
     };
 }

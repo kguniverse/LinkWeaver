@@ -44,7 +44,9 @@ export default function GraphPage() {
           >
             <Card className="flex flex-col h-full">
               <CardHeader>
-                <h3>Search Node</h3>
+                <h2 className="text-lg font-semibold">
+                  Search Nodes
+                </h2>
               </CardHeader>
               <CardContent>
                 <SearchPanel />
@@ -69,7 +71,7 @@ export default function GraphPage() {
             <Card className="flex flex-col h-full">
               <CardHeader>
                 <h2 className="text-lg font-semibold">
-                  (Hold: Selected Object)
+                  Node Details
                 </h2>
               </CardHeader>
               <CardContent>
