@@ -65,7 +65,7 @@ export default function DisplayPanel() {
 
                     <div className="flex-1 min-h-0 flex flex-col">
                         <h4 className="text-md font-medium mb-2">Connections</h4>
-                        <ScrollArea className="flex-1 border rounded">
+                        <ScrollArea className="max-h-[300px]">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
