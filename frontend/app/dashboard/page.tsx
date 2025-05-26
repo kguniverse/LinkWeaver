@@ -1,8 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
-import { fetchGraphData, convertToCytoscape } from "@/lib/api";
-import { ElementDefinition } from "cytoscape";
 import {
   SidebarInset,
   SidebarProvider,
@@ -17,6 +15,7 @@ import {
 import Header from "@/components/header";
 import SearchPanel from "@/components/SearchPanel";
 import DisplayPanel from "@/components/DisplayPanel";
+import AddNodePopover from "@/components/AddNodePopover";
 
 const GraphViewer = dynamic(() => import("@/components/GraphViewer"), {
   ssr: false,
@@ -69,6 +68,7 @@ export default function GraphPage() {
             className="p-4"
           >
             <Card className="flex flex-col h-full">
+              <AddNodePopover />
               <CardHeader>
                 <h2 className="text-lg font-semibold">
                   Node Details
