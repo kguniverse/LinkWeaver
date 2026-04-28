@@ -1,7 +1,5 @@
-import { ElementDefinition } from "cytoscape";
 import cytoscape from "cytoscape";
 import { FirstSubgraph } from "@/services/node-service";
-import { init } from "next/dist/compiled/webpack/webpack";
 
 export type NodeType = {
     id: string;
@@ -68,7 +66,6 @@ class GraphStore {
         }
         this.adjacencyMap.get(edge.target)!.push(edge);
 
-        console.log("edge", edge);
         if (this.cy && this.cy.getElementById(edge.id).length === 0) {
             this.cy.add({
                 group: "edges",

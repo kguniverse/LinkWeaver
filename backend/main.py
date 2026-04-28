@@ -1,6 +1,6 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Query
+from fastapi import FastAPI, UploadFile, File, HTTPException, Query
+from collections import defaultdict
 import httpx
-from typing import Any, Dict, defaultdict
 import uvicorn
 import logging
 

@@ -20,7 +20,7 @@ async def add_data(payload: dict):
         raise HTTPException(status_code=422, detail=f"Validation error: {e}")
 
     try:
-        result = await insert_node(validated.dict(), node_type=type_name)
+        result = await insert_node(validated.model_dump(), node_type=type_name)
         if result.get("errors"):
             raise HTTPException(status_code=500, detail=result["errors"])
         if not result.get("data"):

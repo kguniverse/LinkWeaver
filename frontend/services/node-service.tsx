@@ -90,27 +90,28 @@ export const FirstSubgraph = (nodeId: string) => {
 }
 
 export function fetchNodeInfo(nodeId: string) {
-    // Find the node with the given ID
     const node = mockData.nodes.find((n) => n.id === nodeId);
     if (!node) return null;
 
-    // Find all connections where this node is either the source or target
-    const connections = mockData.relations.filter(
-        (relation) => relation.source === nodeId || relation.target === nodeId
-    );
+    const nameById = new Map(mockData.nodes.map((n) => [n.id, n.label]));
 
-    // Convert the node to the format expected by DisplayPanelProps
+    const connections = mockData.relations
+        .filter((r) => r.source === nodeId || r.target === nodeId)
+        .map((r) => ({
+            ...r,
+            sourceName: nameById.get(r.source) ?? r.source,
+            targetName: nameById.get(r.target) ?? r.target,
+        }));
+
     const nodeInfo = {
         ...node,
-        // Parse attrs if it's a string, or keep it as is if it's already an object
         attrs: typeof node.attrs === 'string' && node.attrs !== '{}'
             ? JSON.parse(node.attrs)
-            : node.attrs
+            : node.attrs,
     };
 
-    // Return the data in DisplayPanelProps format
     return {
-        nodeInfo: nodeInfo,
-        Connections: connections
+        nodeInfo,
+        Connections: connections,
     };
 }

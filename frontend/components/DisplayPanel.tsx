@@ -1,20 +1,25 @@
 import {
     Table,
-    TableCaption,
     TableHeader,
     TableRow,
     TableHead,
     TableBody,
     TableCell,
-    TableFooter
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useDashboardUI } from "@/hooks/use-dashboardUI";
 import { graphStore } from "@/lib/graph-store";
 import { Button } from "./ui/button";
-import { EdgeType } from "@/lib/graph-store";
 import { useEffect, useState } from "react";
 import { fetchNodeInfo } from "@/services/node-service";
+
+type Connection = {
+    source: string;
+    target: string;
+    label?: string;
+    sourceName: string;
+    targetName: string;
+};
 
 type DisplayPanelProps = {
     nodeInfo: {
@@ -23,8 +28,8 @@ type DisplayPanelProps = {
         type?: string;
         attrs?: any;
     };
-    Connections: EdgeType[]
-}
+    Connections: Connection[];
+};
 
 export default function DisplayPanel() {
     const displayNodeId = useDashboardUI((s) => s.displayNodeId);
@@ -84,9 +89,9 @@ export default function DisplayPanel() {
                                             }}
                                             className="cursor-pointer hover:bg-gray-100"
                                         >
-                                            <TableCell className="text-left">{edge.source}</TableCell>
-                                            <TableCell className="text-left">{edge.target}</TableCell>
-                                            <TableCell className="text-left">{edge.label || "无标签"}</TableCell>
+                                            <TableCell className="text-left">{edge.sourceName}</TableCell>
+                                            <TableCell className="text-left">{edge.targetName}</TableCell>
+                                            <TableCell className="text-left">{edge.label || "—"}</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
