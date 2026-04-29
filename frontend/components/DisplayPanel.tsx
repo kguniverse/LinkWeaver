@@ -103,7 +103,7 @@ export default function DisplayPanel() {
   return (
     <div className="h-full flex flex-col">
       {NavBar}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="space-y-5 pr-1">
           <div>
             <div className="flex items-start justify-between gap-2">
