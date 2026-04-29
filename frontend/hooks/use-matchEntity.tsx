@@ -6,7 +6,7 @@ export function useMatchEntity(query: string) {
     return useQuery({
         queryKey: ["match", trimmed],
         queryFn: () => matchEntity(trimmed),
-        enabled: trimmed.length >= 2,
+        enabled: trimmed.length >= 3,
         placeholderData: keepPreviousData,
         staleTime: 1000 * 60 * 5,
     });

@@ -7,9 +7,10 @@ export type MatchHitClass = "restricted" | "informational" | "neutral";
 export type EntityMatch = {
     id: string;
     caption: string;
-    score: number;
     schema: string;
     datasets: string[];
+    topics: string[];
+    country: string | null;
     hit_class: MatchHitClass;
 };
 
@@ -25,6 +26,37 @@ export async function matchEntity(name: string, limit = 10): Promise<EntityMatch
     }
     const data = await res.json();
     return data.matches as EntityMatch[];
+}
+
+export type EntityNode = {
+    id: string;
+    caption: string;
+    schema: string;
+    datasets: string[];
+    topics: string[];
+    country: string | null;
+    hit_class: MatchHitClass;
+};
+
+export type EntityEdge = {
+    id: string;
+    source: string;
+    target: string;
+    label: string;
+};
+
+export type EntityExpansion = {
+    center: EntityNode;
+    neighbors: EntityNode[];
+    edges: EntityEdge[];
+};
+
+export async function fetchEntityExpansion(id: string): Promise<EntityExpansion> {
+    const res = await fetch(`${BACKEND_URL}/entity/${encodeURIComponent(id)}/expand`);
+    if (!res.ok) {
+        throw new Error(`expand failed: ${res.status} ${await res.text()}`);
+    }
+    return (await res.json()) as EntityExpansion;
 }
 
 // TODO: Change from mock data to real data — graph + display panels still use this

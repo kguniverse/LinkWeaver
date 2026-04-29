@@ -2,7 +2,12 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 import httpx
 
-from services.yente_client import match_entity, DEFAULT_LIMIT
+from services.yente_client import (
+    match_entity,
+    fetch_entity,
+    build_one_hop_graph,
+    DEFAULT_LIMIT,
+)
 
 router = APIRouter()
 
@@ -21,3 +26,16 @@ async def match(req: MatchRequest):
     except httpx.RequestError as e:
         raise HTTPException(status_code=503, detail=f"Yente unreachable: {e}")
     return {"matches": results}
+
+
+@router.get("/entity/{entity_id}/expand")
+async def expand_entity(entity_id: str):
+    try:
+        entity = await fetch_entity(entity_id)
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            raise HTTPException(status_code=404, detail=f"Entity {entity_id} not found")
+        raise HTTPException(status_code=502, detail=f"Yente upstream error: {e}")
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=503, detail=f"Yente unreachable: {e}")
+    return build_one_hop_graph(entity)

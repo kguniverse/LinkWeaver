@@ -1,5 +1,32 @@
 import cytoscape from "cytoscape";
-import { FirstSubgraph } from "@/services/node-service";
+import { FirstSubgraph, type EntityExpansion, type EntityNode } from "@/services/node-service";
+
+const FTM_SCHEMA_TO_DISPLAY: Record<string, string> = {
+    Person: "Person",
+    PublicBody: "Organization",
+    LegalEntity: "Organization",
+    Company: "Organization",
+    Organization: "Organization",
+};
+
+function mapSchemaToType(schema: string): string {
+    return FTM_SCHEMA_TO_DISPLAY[schema] ?? "Organization";
+}
+
+function entityToNode(e: EntityNode): NodeType {
+    return {
+        id: e.id,
+        label: e.caption,
+        type: mapSchemaToType(e.schema),
+        attrs: {
+            hit_class: e.hit_class,
+            country: e.country,
+            topics: e.topics,
+            datasets: e.datasets,
+            schema: e.schema,
+        },
+    };
+}
 
 export type NodeType = {
     id: string;
@@ -41,7 +68,10 @@ class GraphStore {
                 this.cy.add({
                     group: "nodes",
                     data: {
-                        ...node,
+                        id: node.id,
+                        label: node.label,
+                        type: node.type,
+                        ...((node.attrs as Record<string, unknown>) ?? {}),
                     },
                 });
             }
@@ -132,6 +162,46 @@ class GraphStore {
         this.layoutGraph();
         this.cy.center(this.cy.getElementById(nodeID));
         this.cy.elements().unselect();
+    }
+
+    loadOneHop(expansion: EntityExpansion) {
+        if (!this.cy) return;
+
+        const centerNode = entityToNode(expansion.center);
+        centerNode.attrs = { ...(centerNode.attrs as object), is_center: 1 };
+        this.addNode(centerNode);
+
+        for (const n of expansion.neighbors) {
+            const neighborNode = entityToNode(n);
+            neighborNode.attrs = { ...(neighborNode.attrs as object), is_center: 0 };
+            this.addNode(neighborNode);
+        }
+        for (const e of expansion.edges) {
+            this.addEdge({
+                id: e.id,
+                source: e.source,
+                target: e.target,
+                label: e.label,
+            });
+        }
+
+        this.cy.layout({
+            name: "concentric",
+            concentric: (node: cytoscape.NodeSingular) => (node.data("is_center") ? 10 : 1),
+            levelWidth: () => 1,
+            minNodeSpacing: 110,
+            spacingFactor: 1.5,
+            fit: true,
+            padding: 70,
+            avoidOverlap: true,
+            startAngle: -Math.PI / 2,
+        } as cytoscape.LayoutOptions).run();
+
+        const centerEl = this.cy.getElementById(expansion.center.id);
+        if (centerEl && centerEl.length > 0) {
+            this.cy.elements().unselect();
+            centerEl.select();
+        }
     }
 
     centerGraphOnNode(nodeId: string) {

@@ -1,16 +1,16 @@
-import { Separator } from "@/components/ui/separator";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Network } from "lucide-react";
 
 export default function Header() {
   return (
-    <header className="group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 flex h-12 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear">
-      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
-        <SidebarTrigger className="-ml-1" />
-        <Separator
-          orientation="vertical"
-          className="mx-2 data-[orientation=vertical]:h-4"
-        />
-        <h1 className="text-base font-medium">LinkWeaver</h1>
+    <header className="h-14 shrink-0 border-b bg-white">
+      <div className="h-full flex items-center gap-3 px-5">
+        <div className="size-8 rounded-md bg-sky-100 flex items-center justify-center">
+          <Network className="size-4 text-sky-700" strokeWidth={2} />
+        </div>
+        <div className="flex flex-col leading-tight">
+          <h1 className="text-sm font-semibold text-slate-900">LinkWeaver</h1>
+          <p className="text-xs text-slate-500">Research Collaboration Triage</p>
+        </div>
       </div>
     </header>
   );
