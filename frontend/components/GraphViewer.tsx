@@ -200,10 +200,16 @@ export default function GraphViewer() {
     });
 
     cyInstance.current = cy;
+    if (process.env.NODE_ENV !== "production") {
+      (window as unknown as { __cy?: cytoscape.Core }).__cy = cy;
+    }
 
     return () => {
       cy.destroy();
       graphStore.setCyInstance(null);
+      if (process.env.NODE_ENV !== "production") {
+        delete (window as unknown as { __cy?: cytoscape.Core }).__cy;
+      }
     };
   }, [setDisplayNodeId, setSearchSelectedNodeId]);
 
@@ -245,18 +251,28 @@ export default function GraphViewer() {
     <div className="relative w-full h-full">
       <div className="w-full h-full" ref={cyRef} />
 
-      {hover && (
-        <div
-          className={`absolute pointer-events-none bg-white/95 backdrop-blur border ${hoverBorder} rounded-md px-2 py-1 shadow-md text-xs leading-tight max-w-[220px] z-20`}
-          style={{
-            left: hover.x + 18,
-            top: hover.y + 18,
-          }}
-        >
-          <div className="font-medium text-slate-900 truncate">{hover.label}</div>
-          {hover.schema && <div className="text-[10px] text-slate-500">{hover.schema}</div>}
-        </div>
-      )}
+      {hover && (() => {
+        const rect = cyRef.current?.getBoundingClientRect();
+        const w = rect?.width ?? 0;
+        const h = rect?.height ?? 0;
+        const flipX = w > 0 && hover.x > w * 0.6;
+        const flipY = h > 0 && hover.y > h * 0.7;
+        const tx = flipX ? "calc(-100% - 18px)" : "18px";
+        const ty = flipY ? "calc(-100% - 18px)" : "18px";
+        return (
+          <div
+            className={`absolute pointer-events-none bg-white/95 backdrop-blur border ${hoverBorder} rounded-md px-2 py-1 shadow-md text-xs leading-tight max-w-[220px] z-20`}
+            style={{
+              left: hover.x,
+              top: hover.y,
+              transform: `translate(${tx}, ${ty})`,
+            }}
+          >
+            <div className="font-medium text-slate-900 truncate">{hover.label}</div>
+            {hover.schema && <div className="text-[10px] text-slate-500">{hover.schema}</div>}
+          </div>
+        );
+      })()}
 
       {showEmpty && (
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
