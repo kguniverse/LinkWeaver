@@ -139,21 +139,26 @@ async def match_entity(
     return out
 
 
-# Each entry: relationship property on center entity → (edge label, field on
-# the nested relationship entity that points to the *other* side of the edge).
-# Yente returns these properties when an entity participates in a known FtM
-# relationship schema (Ownership, Directorship, Succession, etc.).
-ONE_HOP_RELATIONS: dict[str, tuple[str, str]] = {
-    "ownershipOwner": ("owns", "asset"),
-    "ownershipAsset": ("owned by", "owner"),
-    "directorshipDirector": ("director of", "organization"),
-    "directorshipOrganization": ("has director", "director"),
-    "successors": ("succeeded by", "successor"),
-    "predecessors": ("predecessor of", "predecessor"),
-    "associates": ("associate of", "associate"),
-    "family": ("family", "relative"),
-    "membershipMember": ("member of", "organization"),
-    "membershipOrganization": ("has member", "member"),
+# Inverse-relation property names that Yente exposes on an entity. The mapped
+# value is the edge label to display. Symmetric relations like Family / Associate
+# can put the center entity in either field on the relation record, so we don't
+# hardcode a target field — instead we scan the relation's properties for the
+# first non-self entity (see `_other_entity`).
+RELATION_LABELS: dict[str, str] = {
+    "ownershipOwner": "owns",
+    "ownershipAsset": "owned by",
+    "directorshipDirector": "director of",
+    "directorshipOrganization": "has director",
+    "familyPerson": "family",
+    "familyRelative": "family",
+    "associations": "associate",
+    "membershipMember": "member of",
+    "membershipOrganization": "has member",
+    "successors": "succeeded by",
+    "predecessors": "predecessor of",
+    "positionOccupancies": "holds position",
+    "unknownLinkTo": "linked to",
+    "unknownLinkFrom": "linked from",
 }
 
 
@@ -184,35 +189,75 @@ async def fetch_entity(entity_id: str) -> dict:
         return r.json()
 
 
+def _other_entity(relation: dict, center_id: str) -> dict | None:
+    """Pick the non-center entity on a relation record.
+
+    FtM relation entities (Ownership, Family, Associate, etc.) carry both
+    endpoints as nested entity properties. Rather than hardcode a target
+    field per relation type — which breaks for symmetric schemas where the
+    center can sit on either side — scan all entity-typed values and return
+    the first one whose id differs from the center.
+    """
+    props = relation.get("properties", {}) or {}
+    for values in props.values():
+        for v in values or []:
+            if isinstance(v, dict) and v.get("id") and v["id"] != center_id:
+                return v
+    return None
+
+
+# Heavy hitters like Putin can have 50+ direct relations — too dense for a
+# readable concentric one-hop view. Cap and prioritize by risk classification.
+MAX_NEIGHBORS = 30
+HIT_CLASS_RANK = {"restricted": 0, "informational": 1, "neutral": 2}
+
+
 def build_one_hop_graph(entity: dict) -> dict:
     """Turn a full Yente entity record into a {center, neighbors, edges} graph."""
     center = _node_summary(entity)
     center_id = center["id"]
     neighbors: dict[str, dict] = {}
-    edges: list[dict] = []
+    # Dedupe edges by (target_id, label) — Yente often emits multiple relation
+    # records for the same pair (different dates, percentages, sanctions, etc.)
+    # which would otherwise produce duplicate edges that collide on id.
+    edges: dict[tuple[str, str], dict] = {}
 
     props = entity.get("properties", {}) or {}
-    for prop_name, (label, target_field) in ONE_HOP_RELATIONS.items():
-        for relation_obj in props.get(prop_name, []) or []:
-            if not isinstance(relation_obj, dict):
+    for prop_name, label in RELATION_LABELS.items():
+        for relation in props.get(prop_name, []) or []:
+            if not isinstance(relation, dict):
                 continue
-            relation_props = relation_obj.get("properties", {}) or {}
-            for target in relation_props.get(target_field, []) or []:
-                if not isinstance(target, dict) or not target.get("id"):
-                    continue
-                target_node = _node_summary(target)
-                neighbors[target_node["id"]] = target_node
-                edges.append(
-                    {
-                        "id": f"{center_id}-{prop_name}-{target_node['id']}",
-                        "source": center_id,
-                        "target": target_node["id"],
-                        "label": label,
-                    }
-                )
+            other = _other_entity(relation, center_id)
+            if not other:
+                continue
+            target_node = _node_summary(other)
+            neighbors[target_node["id"]] = target_node
+            key = (target_node["id"], label)
+            if key in edges:
+                continue
+            edges[key] = {
+                "id": f"{center_id}-{prop_name}-{target_node['id']}",
+                "source": center_id,
+                "target": target_node["id"],
+                "label": label,
+            }
+
+    total_neighbors = len(neighbors)
+    if total_neighbors > MAX_NEIGHBORS:
+        # Keep restricted first, then informational, then neutral. Within each
+        # bucket preserve discovery order so the analyst still sees the first
+        # relations Yente surfaced.
+        ranked = sorted(
+            neighbors.values(),
+            key=lambda n: HIT_CLASS_RANK.get(n.get("hit_class", "neutral"), 9),
+        )
+        kept_ids = {n["id"] for n in ranked[:MAX_NEIGHBORS]}
+        neighbors = {nid: n for nid, n in neighbors.items() if nid in kept_ids}
+        edges = {k: e for k, e in edges.items() if e["target"] in kept_ids}
 
     return {
         "center": center,
         "neighbors": list(neighbors.values()),
-        "edges": edges,
+        "edges": list(edges.values()),
+        "total_neighbors": total_neighbors,
     }

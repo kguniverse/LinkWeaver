@@ -115,6 +115,18 @@ function generateStyles(): cytoscape.StylesheetStyle[] {
         width: 1.6,
       },
     },
+    {
+      selector: "edge.dense",
+      style: {
+        "text-opacity": 0,
+      },
+    },
+    {
+      selector: "edge.dense:hover",
+      style: {
+        "text-opacity": 1,
+      },
+    },
   ];
 }
 

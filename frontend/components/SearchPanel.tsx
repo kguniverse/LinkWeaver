@@ -20,7 +20,6 @@ const MIN_QUERY_LENGTH = 3;
 
 export default function SearchPanel() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [pickedId, setPickedId] = useState<string | null>(null);
   const deferredQuery = useDeferredValue(searchQuery);
   const { data: matches = [], isFetching, isError } = useMatchEntity(deferredQuery);
   const setDisplayNodeId = useDashboardUI((s) => s.setDisplayNodeId);
@@ -29,25 +28,20 @@ export default function SearchPanel() {
 
   const trimmedLen = searchQuery.trim().length;
   const showResults = trimmedLen >= MIN_QUERY_LENGTH;
-  // Once the user picks a match, collapse the result list until they edit again.
-  const justPicked = pickedId !== null && trimmedLen > 0;
-  const showList = showResults && !justPicked;
 
-  const clearSearch = () => {
-    setSearchQuery("");
-    setPickedId(null);
-  };
+  const clearSearch = () => setSearchQuery("");
 
   const handleSelect = (match: EntityMatch) => {
     setSearchSelectedNodeId(match.id);
     setDisplayNodeId(match.id);
-    setSearchQuery(match.caption);
-    setPickedId(match.id);
+    // Clear the input rather than echoing the caption — the picked entity is
+    // already shown in the graph + display panel, and a stale caption sitting
+    // in the search box gets confusing once the user navigates around.
+    setSearchQuery("");
   };
 
   const handleQueryChange = (v: string) => {
     setSearchQuery(v);
-    if (pickedId !== null) setPickedId(null);
   };
 
   // Cmd/Ctrl+K focuses the search input from anywhere in the dashboard.
@@ -112,10 +106,10 @@ export default function SearchPanel() {
         {isError && (
           <CommandEmpty>Search failed. Is the backend running on :5001?</CommandEmpty>
         )}
-        {showList && !isError && !isFetching && matches.length === 0 && (
+        {showResults && !isError && !isFetching && matches.length === 0 && (
           <CommandEmpty>No entities matched “{searchQuery.trim()}”.</CommandEmpty>
         )}
-        {showList && matches.map((m: EntityMatch) => {
+        {showResults && matches.map((m: EntityMatch) => {
           const country = countryName(m.country);
           const isSelected = searchSelectedNodeId === m.id;
           return (

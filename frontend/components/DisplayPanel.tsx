@@ -167,7 +167,13 @@ export default function DisplayPanel() {
           )}
 
           {expansion.neighbors.length > 0 && (
-            <Section title={`Connections (${expansion.neighbors.length})`}>
+            <Section
+              title={
+                expansion.total_neighbors > expansion.neighbors.length
+                  ? `Connections (showing ${expansion.neighbors.length} of ${expansion.total_neighbors})`
+                  : `Connections (${expansion.neighbors.length})`
+              }
+            >
               <ul className="space-y-1.5">
                 {expansion.edges.map((edge) => {
                   const neighborId = edge.source === e.id ? edge.target : edge.source;

@@ -49,6 +49,7 @@ export type EntityExpansion = {
     center: EntityNode;
     neighbors: EntityNode[];
     edges: EntityEdge[];
+    total_neighbors: number;
 };
 
 export async function fetchEntityExpansion(id: string): Promise<EntityExpansion> {

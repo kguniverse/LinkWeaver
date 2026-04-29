@@ -185,14 +185,27 @@ class GraphStore {
             });
         }
 
+        // Tighten spacing as the ring fills up so 30-neighbor PEPs still fit
+        // without scrolling, while 4-neighbor cases stay airy.
+        const n = expansion.neighbors.length;
+        const minNodeSpacing = n > 25 ? 70 : n > 15 ? 90 : 110;
+        const spacingFactor = n > 25 ? 1.1 : n > 15 ? 1.3 : 1.5;
+        const padding = n > 25 ? 30 : 50;
+
+        // Hide edge labels in dense graphs — overlapping "family" / "holds
+        // position" labels collapse into illegible mush at >15 edges.
+        if (expansion.edges.length > 15) {
+            this.cy.edges().addClass("dense");
+        }
+
         this.cy.layout({
             name: "concentric",
             concentric: (node: cytoscape.NodeSingular) => (node.data("is_center") ? 10 : 1),
             levelWidth: () => 1,
-            minNodeSpacing: 110,
-            spacingFactor: 1.5,
+            minNodeSpacing,
+            spacingFactor,
             fit: true,
-            padding: 70,
+            padding,
             avoidOverlap: true,
             startAngle: -Math.PI / 2,
         } as cytoscape.LayoutOptions).run();
