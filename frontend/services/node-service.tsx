@@ -1,6 +1,33 @@
 import { NodeType, EdgeType } from "@/lib/graph-store";
 
-// TODO: Change from mock data to real data
+const BACKEND_URL = "http://localhost:5001";
+
+export type MatchHitClass = "restricted" | "informational" | "neutral";
+
+export type EntityMatch = {
+    id: string;
+    caption: string;
+    score: number;
+    schema: string;
+    datasets: string[];
+    hit_class: MatchHitClass;
+};
+
+export async function matchEntity(name: string, limit = 10): Promise<EntityMatch[]> {
+    if (!name.trim()) return [];
+    const res = await fetch(`${BACKEND_URL}/match`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, limit }),
+    });
+    if (!res.ok) {
+        throw new Error(`match failed: ${res.status} ${await res.text()}`);
+    }
+    const data = await res.json();
+    return data.matches as EntityMatch[];
+}
+
+// TODO: Change from mock data to real data — graph + display panels still use this
 const mockData = {
     nodes: [
         { id: "8753", label: "Neuralink", type: "Organization", attrs: "{}" },

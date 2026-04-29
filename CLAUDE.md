@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 LinkWeaver is a graph-visualization app built on top of Dgraph. The repo is split into three runtime pieces that must all be up for the app to work:
 
 - **Dgraph cluster** (`docker-compose.yml`) — `zero` + `alpha` + `ratel` UI. Alpha exposes HTTP at `localhost:8080` and gRPC at `9080`. Ratel UI at `localhost:8000`.
-- **Backend** (`backend/`) — FastAPI app on `localhost:5000`. Talks to Dgraph's HTTP `/mutate` and `/query` endpoints (see `backend/services/dgraph_client.py` and `backend/main.py`). Hardcoded URLs — there is no config layer.
+- **Backend** (`backend/`) — FastAPI app on `localhost:5001`. Talks to Dgraph's HTTP `/mutate` and `/query` endpoints (see `backend/services/dgraph_client.py` and `backend/main.py`). Hardcoded URLs — there is no config layer.
 - **Frontend** (`frontend/`) — Next.js 15 (App Router, React 19, Turbopack) on `localhost:3000`.
 
 ## Common commands
@@ -18,7 +18,7 @@ docker compose up -d
 
 # Backend (from backend/)
 pip install -r requirement.txt
-python main.py                   # runs uvicorn on :5000 with reload
+python main.py                   # runs uvicorn on :5001 with reload (5000 collides with macOS AirPlay)
 
 # Frontend (from frontend/)
 npm install

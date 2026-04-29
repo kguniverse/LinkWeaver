@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Command,
   CommandInput,
@@ -6,35 +8,59 @@ import {
   CommandItem,
 } from "@/components/ui/command";
 
-import { useEffect, useState, useRef } from "react";
-import { useDashboardUI } from "@/hooks/use-dashboardUI";
-import { useAllNodes } from "@/hooks/use-allNodes";
-import { graphStore } from "@/lib/graph-store";
+import { useState, useDeferredValue } from "react";
+import { useMatchEntity } from "@/hooks/use-matchEntity";
+import type { EntityMatch, MatchHitClass } from "@/services/node-service";
 import { X } from "lucide-react";
+
+const HIT_CLASS_BADGE: Record<MatchHitClass, { label: string; className: string } | null> = {
+  restricted: {
+    label: "Hit",
+    className: "bg-red-100 text-red-700 border border-red-300",
+  },
+  informational: {
+    label: "Mention",
+    className: "bg-gray-100 text-gray-600 border border-gray-300",
+  },
+  neutral: null,
+};
+
+function HitBadge({ hitClass }: { hitClass: MatchHitClass }) {
+  const cfg = HIT_CLASS_BADGE[hitClass];
+  if (!cfg) return null;
+  return (
+    <span className={`inline-block text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded ${cfg.className}`}>
+      {cfg.label}
+    </span>
+  );
+}
+
+function DatasetSummary({ datasets }: { datasets: string[] }) {
+  if (datasets.length === 0) return null;
+  const head = datasets.slice(0, 2).join(", ");
+  const more = datasets.length > 2 ? ` +${datasets.length - 2}` : "";
+  return (
+    <span className="text-[11px] text-muted-foreground truncate">
+      {head}
+      {more}
+    </span>
+  );
+}
 
 export default function SearchPanel() {
   const [searchQuery, setSearchQuery] = useState("");
-  const setSearchSelectedNodeId = useDashboardUI((s) => s.setSearchSelectedNodeId);
-  const setDisplayNodeId = useDashboardUI((s) => s.setDisplayNodeId);
-  const { data: allNodes = [], isLoading } = useAllNodes();
+  const deferredQuery = useDeferredValue(searchQuery);
+  const { data: matches = [], isLoading, isError } = useMatchEntity(deferredQuery);
 
-  const filtered = allNodes.filter((n) =>
-    n.label.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const clearSearch = () => {
-    setSearchQuery("");
-  };
+  const clearSearch = () => setSearchQuery("");
 
   return (
-    <Command>
+    <Command shouldFilter={false}>
       <div className="relative">
         <CommandInput
-          placeholder="Search..."
+          placeholder="Search a person or organization..."
           value={searchQuery}
-          onValueChange={(v) => {
-            setSearchQuery(v);
-          }}
+          onValueChange={setSearchQuery}
         />
         {searchQuery && (
           <button
@@ -46,23 +72,36 @@ export default function SearchPanel() {
         )}
       </div>
       <CommandList>
-        <CommandEmpty>No result found.</CommandEmpty>
-        {filtered.map((node) => (
+        {searchQuery.trim().length < 2 && (
+          <CommandEmpty>Type at least 2 characters to search.</CommandEmpty>
+        )}
+        {searchQuery.trim().length >= 2 && isLoading && (
+          <CommandEmpty>Searching…</CommandEmpty>
+        )}
+        {isError && (
+          <CommandEmpty>Search failed. Is the backend running on :5001?</CommandEmpty>
+        )}
+        {!isLoading && !isError && searchQuery.trim().length >= 2 && matches.length === 0 && (
+          <CommandEmpty>No match found.</CommandEmpty>
+        )}
+        {matches.map((m: EntityMatch) => (
           <CommandItem
-            key={node.id}
-            value={node.label}
-            onSelect={async () => {
-              graphStore.clear();
-              setSearchSelectedNodeId(node.id);
-              setSearchQuery(node.label);
-              setDisplayNodeId(node.id);
-              graphStore.initGraph(node.id);
-            }}
+            key={m.id}
+            value={`${m.caption} ${m.id}`}
+            onSelect={() => setSearchQuery(m.caption)}
+            className="flex flex-col items-start gap-0.5"
           >
-            {node.label}
+            <div className="flex items-center gap-2 w-full">
+              <span className="font-medium truncate flex-1">{m.caption}</span>
+              <HitBadge hitClass={m.hit_class} />
+              <span className="text-[11px] text-muted-foreground tabular-nums">
+                {m.score.toFixed(2)}
+              </span>
+            </div>
+            <DatasetSummary datasets={m.datasets} />
           </CommandItem>
         ))}
       </CommandList>
-    </Command >
+    </Command>
   );
 }

@@ -1,13 +1,23 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from collections import defaultdict
 import httpx
 import uvicorn
 import logging
 
-from api import data
+from api import data, match
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(data.router)
+app.include_router(match.router)
 
 # Dgraph Alpha HTTP API endpoint
 DGRAPH_ALTER_ENDPOINT = "http://localhost:8080/alter"
@@ -76,4 +86,4 @@ async def query_by_field(field: str = Query(..., example="name")):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=5001, reload=True)
