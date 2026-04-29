@@ -28,6 +28,46 @@ services:
       - alpha
     command: dgraph-ratel
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: linkweaver-es
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx1g"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+
+  yente:
+    image: ghcr.io/opensanctions/yente:latest
+    container_name: linkweaver-yente
+    depends_on:
+      - elasticsearch
+    environment:
+      - YENTE_INDEX_URL=http://elasticsearch:9200
+      - YENTE_MANIFEST=/app/manifests/civic.yml
+    ports:
+      - "8001:8000"
+    command: ["yente", "serve"]
+
+  yente-indexer:
+    image: ghcr.io/opensanctions/yente:latest
+    container_name: linkweaver-yente-indexer
+    depends_on:
+      - elasticsearch
+    environment:
+      - YENTE_INDEX_URL=http://elasticsearch:9200
+      - YENTE_MANIFEST=/app/manifests/civic.yml
+    command: ["yente", "reindex"]
+    restart: "no"
+
 volumes:
   dgraph_zero:
   dgraph_alpha:
+  es_data:
