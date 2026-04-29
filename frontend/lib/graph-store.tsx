@@ -48,12 +48,18 @@ class GraphStore {
     private nodeMap: Map<string, NodeType>;
     private edgeMap: Map<string, EdgeType>;
     private adjacencyMap: Map<string, EdgeType[]>;
+    private expandedIds: Set<string>;
     private cy: cytoscape.Core | null = null;
 
     constructor() {
         this.nodeMap = new Map();
         this.edgeMap = new Map();
         this.adjacencyMap = new Map();
+        this.expandedIds = new Set();
+    }
+
+    hasExpanded(nodeId: string): boolean {
+        return this.expandedIds.has(nodeId);
     }
 
     setCyInstance(cy: cytoscape.Core | null) {
@@ -79,12 +85,32 @@ class GraphStore {
     }
 
     addEdge(edge: EdgeType) {
-        if (!edge.id) {
-            edge.id = `${edge.source}-${edge.target}`;
+        // Collapse parallel edges between the same node pair (in either
+        // direction) into a single visual edge. Yente often emits both
+        // `spouse` and `family member` for the same pair, plus mirror
+        // entries source→target and target→source — drawing all of those
+        // turns dense neighborhoods into spaghetti.
+        const [a, b] = [edge.source, edge.target].sort();
+        const canonId = `${a}|${b}`;
+        const existing = this.edgeMap.get(canonId);
+        if (existing) {
+            const newLabel = (edge.label || "").trim();
+            if (newLabel) {
+                const parts = (existing.label || "")
+                    .split(" · ")
+                    .map((p) => p.trim())
+                    .filter(Boolean);
+                if (!parts.includes(newLabel)) {
+                    parts.push(newLabel);
+                    existing.label = parts.join(" · ");
+                    this.cy?.getElementById(canonId).data("label", existing.label);
+                }
+            }
+            return;
         }
-        if (this.edgeMap.has(edge.id)) return;
 
-        this.edgeMap.set(edge.id, edge);
+        edge.id = canonId;
+        this.edgeMap.set(canonId, edge);
 
         if (!this.adjacencyMap.has(edge.source)) {
             this.adjacencyMap.set(edge.source, []);
@@ -96,11 +122,12 @@ class GraphStore {
         }
         this.adjacencyMap.get(edge.target)!.push(edge);
 
-        if (this.cy && this.cy.getElementById(edge.id).length === 0) {
+        if (this.cy && this.cy.getElementById(canonId).length === 0) {
             this.cy.add({
                 group: "edges",
                 data: {
                     ...edge,
+                    id: canonId,
                 },
             });
         }
@@ -164,14 +191,35 @@ class GraphStore {
         this.cy.elements().unselect();
     }
 
+    // Merge a 1-hop expansion into the current graph. The first call lays out
+    // from scratch; subsequent calls keep the prior layout fixed and only
+    // arrange the newly-introduced neighbors so the user can weave a larger
+    // graph step by step instead of resetting on every focus change.
     loadOneHop(expansion: EntityExpansion) {
         if (!this.cy) return;
 
-        const centerNode = entityToNode(expansion.center);
-        centerNode.attrs = { ...(centerNode.attrs as object), is_center: 1 };
-        this.addNode(centerNode);
+        const isFirst = this.cy.elements().length === 0;
+        const centerId = expansion.center.id;
+        const newNodeIds: string[] = [];
+
+        // Demote previously-marked centers — only the most recently expanded
+        // node carries the is_center flag (and the larger style that comes
+        // with it).
+        this.cy.nodes('[is_center = 1]').forEach((n) => {
+            n.data("is_center", 0);
+        });
+
+        if (!this.nodeMap.has(centerId)) newNodeIds.push(centerId);
+        const centerNodeData = entityToNode(expansion.center);
+        centerNodeData.attrs = { ...(centerNodeData.attrs as object), is_center: 1 };
+        this.addNode(centerNodeData);
+        const centerEl = this.cy.getElementById(centerId);
+        // addNode() is a no-op for already-present nodes, so push is_center=1
+        // directly onto the cytoscape element to cover that case too.
+        centerEl.data("is_center", 1);
 
         for (const n of expansion.neighbors) {
+            if (!this.nodeMap.has(n.id)) newNodeIds.push(n.id);
             const neighborNode = entityToNode(n);
             neighborNode.attrs = { ...(neighborNode.attrs as object), is_center: 0 };
             this.addNode(neighborNode);
@@ -185,36 +233,108 @@ class GraphStore {
             });
         }
 
-        // Tighten spacing as the ring fills up so 30-neighbor PEPs still fit
-        // without scrolling, while 4-neighbor cases stay airy.
-        const n = expansion.neighbors.length;
-        const minNodeSpacing = n > 25 ? 70 : n > 15 ? 90 : 110;
-        const spacingFactor = n > 25 ? 1.1 : n > 15 ? 1.3 : 1.5;
-        const padding = n > 25 ? 30 : 50;
+        this.expandedIds.add(centerId);
+        centerEl.addClass("expanded");
 
-        // Hide edge labels in dense graphs — overlapping "family" / "holds
-        // position" labels collapse into illegible mush at >15 edges.
-        if (expansion.edges.length > 15) {
+        // Hide edge labels once the accumulated graph passes the legibility
+        // threshold; show them again if the user has reset back to a small
+        // graph.
+        if (this.cy.edges().length > 25) {
             this.cy.edges().addClass("dense");
+        } else {
+            this.cy.edges().removeClass("dense");
         }
 
-        this.cy.layout({
-            name: "concentric",
-            concentric: (node: cytoscape.NodeSingular) => (node.data("is_center") ? 10 : 1),
-            levelWidth: () => 1,
-            minNodeSpacing,
-            spacingFactor,
-            fit: true,
-            padding,
-            avoidOverlap: true,
-            startAngle: -Math.PI / 2,
-        } as cytoscape.LayoutOptions).run();
+        // Scale layout pressure with graph size — sparse graphs stay airy,
+        // dense ones spread further so the hairball loosens up.
+        const totalNodes = this.cy.nodes().length;
+        const repulsion = totalNodes > 30 ? 18000 : totalNodes > 15 ? 12000 : 8500;
+        const idealEdge = totalNodes > 30 ? 160 : totalNodes > 15 ? 130 : 110;
 
-        const centerEl = this.cy.getElementById(expansion.center.id);
-        if (centerEl && centerEl.length > 0) {
-            this.cy.elements().unselect();
-            centerEl.select();
+        // A brand-new component is one where the freshly added center isn't
+        // wired into any pre-existing node — typically when the user picks a
+        // second unrelated search result. Drop it in empty space to the right
+        // so it doesn't pile on top of the existing cluster.
+        const preExistingIds = new Set<string>();
+        this.cy.nodes().forEach((n) => {
+            if (!newNodeIds.includes(n.id())) preExistingIds.add(n.id());
+        });
+        const centerWasNew = newNodeIds.includes(centerId);
+        const connectsToExisting = expansion.edges.some((e) => {
+            const other = e.source === centerId ? e.target : e.source;
+            return preExistingIds.has(other);
+        });
+        const isDisconnectedComponent = centerWasNew && !connectsToExisting && preExistingIds.size > 0;
+
+        if (isDisconnectedComponent) {
+            const bb = this.cy.nodes()
+                .filter((n) => preExistingIds.has(n.id()))
+                .boundingBox({});
+            centerEl.position({ x: bb.x2 + 280, y: (bb.y1 + bb.y2) / 2 });
         }
+
+        if (isFirst) {
+            this.cy.layout({
+                name: "cose",
+                animate: true,
+                animationDuration: 400,
+                randomize: true,
+                fit: true,
+                padding: 60,
+                nodeRepulsion: () => repulsion,
+                idealEdgeLength: () => idealEdge,
+                gravity: 0.2,
+            } as cytoscape.LayoutOptions).run();
+        } else {
+            // Seed new neighbors around the (possibly already-positioned)
+            // center so the force layout starts from a reasonable shape.
+            const centerPos = centerEl.position();
+            const newNeighbors = newNodeIds.filter((id) => id !== centerId);
+            const radius = 150 + Math.min(newNeighbors.length, 20) * 4;
+            newNeighbors.forEach((id, i) => {
+                const angle = (i / Math.max(newNeighbors.length, 1)) * Math.PI * 2;
+                this.cy!.getElementById(id).position({
+                    x: centerPos.x + Math.cos(angle) * radius,
+                    y: centerPos.y + Math.sin(angle) * radius,
+                });
+            });
+
+            // Lock everything that already had a position so the prior layout
+            // stays put — only the freshly-added neighbors get to move.
+            const existing = this.cy.nodes().filter(
+                (n) => !newNodeIds.includes(n.id())
+            );
+            existing.lock();
+
+            const layout = this.cy.layout({
+                name: "cose",
+                animate: true,
+                animationDuration: 350,
+                randomize: false,
+                fit: false,
+                nodeRepulsion: () => repulsion,
+                idealEdgeLength: () => idealEdge,
+                gravity: 0.15,
+            } as cytoscape.LayoutOptions);
+
+            layout.one("layoutstop", () => {
+                existing.unlock();
+                // When a new component is dropped in, the user almost always
+                // wants to see it — gently re-fit. For tight in-place expansions
+                // (a couple of new neighbors near the current focus) leave the
+                // user's pan/zoom alone.
+                if (isDisconnectedComponent && this.cy) {
+                    this.cy.animate({
+                        fit: { eles: this.cy.elements(), padding: 60 },
+                        duration: 350,
+                    });
+                }
+            });
+            layout.run();
+        }
+
+        this.cy.elements().unselect();
+        centerEl.select();
     }
 
     centerGraphOnNode(nodeId: string) {
@@ -289,6 +409,7 @@ class GraphStore {
         this.nodeMap.clear();
         this.edgeMap.clear();
         this.adjacencyMap.clear();
+        this.expandedIds.clear();
         this.cy?.elements().remove();
         this.cy?.reset();
     }

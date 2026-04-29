@@ -4,7 +4,7 @@ import cytoscape from "cytoscape";
 import { graphStore } from "@/lib/graph-store";
 import { useDashboardUI } from "@/hooks/use-dashboardUI";
 import { useEntityExpansion } from "@/hooks/use-entityExpansion";
-import { Search, ZoomIn, ZoomOut, Maximize2, MousePointerClick } from "lucide-react";
+import { Search, ZoomIn, ZoomOut, Maximize2, MousePointerClick, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const HIT_COLORS = {
@@ -78,6 +78,15 @@ function generateStyles(): cytoscape.StylesheetStyle[] {
       },
     },
     {
+      selector: "node.expanded",
+      style: {
+        // Subtle double-ring on nodes the user has already expanded — quick
+        // visual answer to "have I been here yet?".
+        "border-style": "double",
+        "border-width": 4,
+      },
+    },
+    {
       selector: "node.cy-hover",
       style: {
         "border-width": 3,
@@ -95,13 +104,18 @@ function generateStyles(): cytoscape.StylesheetStyle[] {
         "text-background-opacity": 0.85,
         "text-background-padding": "1px",
         "text-opacity": 0.75,
-        "curve-style": "straight",
+        // Bezier softens crossings in dense graphs and the bundling is more
+        // forgiving than straight lines when many edges share endpoints.
+        "curve-style": "bezier",
+        "control-point-step-size": 30,
         "target-arrow-shape": "triangle",
-        "line-color": "#e2e8f0",
-        "target-arrow-color": "#e2e8f0",
+        "line-color": "#cbd5e1",
+        "target-arrow-color": "#cbd5e1",
         "arrow-scale": 0.8,
         width: 1,
-        opacity: 0.7,
+        opacity: 0.6,
+        "transition-property": "opacity, line-color, width",
+        "transition-duration": 150,
       },
     },
     {
@@ -127,6 +141,35 @@ function generateStyles(): cytoscape.StylesheetStyle[] {
         "text-opacity": 1,
       },
     },
+    {
+      selector: "node.faded",
+      style: {
+        opacity: 0.18,
+        "text-opacity": 0.25,
+      },
+    },
+    {
+      selector: "edge.faded",
+      style: {
+        opacity: 0.08,
+        "text-opacity": 0,
+      },
+    },
+    {
+      selector: "node.focus-neighborhood",
+      style: {
+        "border-color": "#0284c7",
+      },
+    },
+    {
+      selector: "edge.focus-neighborhood",
+      style: {
+        "line-color": "#0284c7",
+        "target-arrow-color": "#0284c7",
+        opacity: 0.95,
+        width: 1.6,
+      },
+    },
   ];
 }
 
@@ -145,7 +188,9 @@ export default function GraphViewer() {
   const setSearchSelectedNodeId = useDashboardUI((s) => s.setSearchSelectedNodeId);
   const searchSelectedNodeId = useDashboardUI((s) => s.searchSelectedNodeId);
   const displayNodeId = useDashboardUI((s) => s.displayNodeId);
+  const resetExploration = useDashboardUI((s) => s.resetExploration);
   const [hover, setHover] = useState<HoverInfo | null>(null);
+  const [graphSize, setGraphSize] = useState({ nodes: 0, edges: 0 });
 
   const { data: expansion, isFetching, isError } = useEntityExpansion(searchSelectedNodeId);
 
@@ -176,6 +221,15 @@ export default function GraphViewer() {
     cy.on("mouseover", "node", (evt) => {
       const node = evt.target;
       node.addClass("cy-hover");
+
+      // Only fade the rest of the graph once it's dense enough that the
+      // dimming actually helps — at 6 nodes it's just visual noise.
+      if (cy.nodes().length >= 6) {
+        const neighborhood = node.closedNeighborhood();
+        cy.elements().difference(neighborhood).addClass("faded");
+        neighborhood.addClass("focus-neighborhood");
+      }
+
       const pos = node.renderedPosition();
       setHover({
         label: node.data("label"),
@@ -188,6 +242,7 @@ export default function GraphViewer() {
 
     cy.on("mouseout", "node", (evt) => {
       evt.target.removeClass("cy-hover");
+      cy.elements().removeClass("faded").removeClass("focus-neighborhood");
       setHover(null);
     });
 
@@ -198,6 +253,11 @@ export default function GraphViewer() {
         cy.elements().unselect();
       }
     });
+
+    const refreshSize = () => {
+      setGraphSize({ nodes: cy.nodes().length, edges: cy.edges().length });
+    };
+    cy.on("add remove", refreshSize);
 
     cyInstance.current = cy;
     if (process.env.NODE_ENV !== "production") {
@@ -213,10 +273,10 @@ export default function GraphViewer() {
     };
   }, [setDisplayNodeId, setSearchSelectedNodeId]);
 
-  // Replace the graph whenever a new entity expansion arrives.
+  // Merge each new expansion into the graph (accumulative). The graph is only
+  // wiped when the user hits the explicit Reset button.
   useEffect(() => {
     if (expansion) {
-      graphStore.clear();
       graphStore.loadOneHop(expansion);
     }
   }, [expansion]);
@@ -236,8 +296,14 @@ export default function GraphViewer() {
   const handleFit = () => cyInstance.current?.fit(undefined, 40);
   const handleZoomIn = () => cyInstance.current?.zoom({ level: cyInstance.current.zoom() * 1.25, position: cyInstance.current.pan() });
   const handleZoomOut = () => cyInstance.current?.zoom({ level: cyInstance.current.zoom() * 0.8, position: cyInstance.current.pan() });
+  const handleReset = () => {
+    graphStore.clear();
+    resetExploration();
+    setGraphSize({ nodes: 0, edges: 0 });
+  };
 
-  const showEmpty = !searchSelectedNodeId && !expansion;
+  const hasGraph = graphSize.nodes > 0;
+  const showEmpty = !searchSelectedNodeId && !expansion && !hasGraph;
   const showLoading = isFetching && searchSelectedNodeId;
 
   const hoverBorder =
@@ -301,10 +367,15 @@ export default function GraphViewer() {
         </div>
       )}
 
-      {expansion && !showEmpty && (
-        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur border rounded-md px-2.5 py-1.5 text-[11px] text-slate-500 shadow-sm flex items-center gap-1.5">
-          <MousePointerClick className="size-3" />
-          <span>Click to inspect · double-click to expand</span>
+      {hasGraph && (
+        <div className="absolute top-4 left-4 flex items-center gap-2">
+          <div className="bg-white/90 backdrop-blur border rounded-md px-2.5 py-1.5 text-[11px] text-slate-500 shadow-sm flex items-center gap-1.5">
+            <MousePointerClick className="size-3" />
+            <span>Click to inspect · double-click to grow the graph</span>
+          </div>
+          <div className="bg-white/90 backdrop-blur border rounded-md px-2.5 py-1.5 text-[11px] text-slate-600 shadow-sm font-mono tabular-nums">
+            {graphSize.nodes} node{graphSize.nodes === 1 ? "" : "s"} · {graphSize.edges} edge{graphSize.edges === 1 ? "" : "s"}
+          </div>
         </div>
       )}
 
@@ -317,6 +388,16 @@ export default function GraphViewer() {
         </Button>
         <Button onClick={handleFit} size="icon" variant="ghost" className="size-8" title="Fit to view">
           <Maximize2 className="size-4" />
+        </Button>
+        <Button
+          onClick={handleReset}
+          size="icon"
+          variant="ghost"
+          className="size-8 text-slate-500 hover:text-red-600"
+          title="Clear graph"
+          disabled={!hasGraph}
+        >
+          <RotateCcw className="size-4" />
         </Button>
       </div>
     </div>

@@ -14,6 +14,9 @@ interface DashboardUIState {
     goForward: () => void;
     canGoBack: () => boolean;
     canGoForward: () => boolean;
+
+    // Wipe all exploration state — used by the graph "Reset" button.
+    resetExploration: () => void;
 }
 
 export const useDashboardUI = create<DashboardUIState>((set, get) => ({
@@ -51,4 +54,12 @@ export const useDashboardUI = create<DashboardUIState>((set, get) => ({
 
     canGoBack: () => get().pastIds.length > 0,
     canGoForward: () => get().futureIds.length > 0,
+
+    resetExploration: () =>
+        set({
+            searchSelectedNodeId: null,
+            displayNodeId: null,
+            pastIds: [],
+            futureIds: [],
+        }),
 }));
